@@ -1,0 +1,129 @@
+package templates
+
+templ Index(serverName string, isConnected bool) {
+	@Layout("System Monitor") {
+		<div class="app-container">
+			@Header(serverName, isConnected)
+			<div class="main-layout">
+				<aside class="sidebar">
+					<div class="sidebar-header">
+						<h2>Services</h2>
+						<button class="refresh-btn" hx-get="/api/services" hx-target="#services-list">
+							@RefreshIcon()
+						</button>
+					</div>
+					<div id="services-list" class="services-list" hx-get="/api/services" hx-trigger="load">
+						@ServicesSkeleton()
+					</div>
+				</aside>
+				<main class="main-content">
+					<div id="service-details" class="service-details">
+						@EmptyState()
+					</div>
+				</main>
+			</div>
+			@LogsModal()
+			@AddServiceModal()
+			<div id="modal-overlay" class="modal-overlay"></div>
+		</div>
+	}
+}
+
+templ ServicesSkeleton() {
+	for i := 0; i < 6; i++ {
+		<div class="service-item skeleton">
+			<div class="service-item-header">
+				<div class="skeleton-text skeleton-title"></div>
+				<div class="skeleton-dot"></div>
+			</div>
+			<div class="service-item-meta">
+				<div class="skeleton-text skeleton-small"></div>
+				<div class="skeleton-text skeleton-tiny"></div>
+			</div>
+			<div class="skeleton-text skeleton-description"></div>
+		</div>
+	}
+}
+
+templ EmptyState() {
+	<div class="empty-state">
+		<div class="empty-state-icon">
+			@SystemIcon()
+		</div>
+		<h3>Select a Service</h3>
+		<p>Choose a service from the sidebar to view its details and manage it.</p>
+	</div>
+}
+
+templ LogsModal() {
+	<div id="logs-modal" class="modal">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h3 id="logs-title">Service Logs</h3>
+				<div class="modal-controls">
+					<button class="refresh-logs-btn" onclick="refreshLogs()">
+						@RefreshIcon()
+						Refresh
+					</button>
+					<button class="close-btn" onclick="closeLogs()">
+						@CloseIcon()
+					</button>
+				</div>
+			</div>
+			<div class="logs-container">
+				<div class="logs-options">
+					<label>
+						<input type="checkbox" id="follow-logs" checked/> Follow logs
+					</label>
+					<select id="log-lines">
+						<option value="50">Last 50 lines</option>
+						<option value="100" selected>Last 100 lines</option>
+						<option value="500">Last 500 lines</option>
+						<option value="1000">Last 1000 lines</option>
+					</select>
+				</div>
+				<pre id="logs-content" class="logs-output">Loading logs...</pre>
+			</div>
+		</div>
+	</div>
+}
+
+templ AddServiceModal() {
+	<div id="add-service-modal" class="modal">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h3>Add Service to Monitor</h3>
+				<button class="close-btn" onclick="closeAddServiceModal()">
+					@CloseIcon()
+				</button>
+			</div>
+			<div class="add-service-container">
+				<form id="add-service-form" hx-post="/api/services/add" hx-target="#add-service-result" hx-on::after-request="handleAddServiceResponse(event)">
+					<div class="form-group">
+						<label for="service-name">Service Name</label>
+						<input
+							type="text"
+							id="service-name"
+							name="service_name"
+							required
+							placeholder="e.g., apache2, mysql, mongodb"
+							pattern="[a-zA-Z0-9\-_\.]+"
+							title="Service name can contain letters, numbers, hyphens, underscores, and dots"
+						/>
+					</div>
+					<div class="form-group">
+						<label>
+							<input type="checkbox" id="validate-service" name="validate" checked/>
+							Validate service exists before adding
+						</label>
+					</div>
+					<div class="form-actions">
+						<button type="button" class="cancel-btn" onclick="closeAddServiceModal()">Cancel</button>
+						<button type="submit" class="submit-btn">Add Service</button>
+					</div>
+				</form>
+				<div id="add-service-result"></div>
+			</div>
+		</div>
+	</div>
+}

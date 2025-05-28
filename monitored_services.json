@@ -1,0 +1,7 @@
+[
+  "NetworkManager",
+  "bluetooth",
+  "smb",
+  "sshd",
+  "upower"
+]

@@ -1,0 +1,167 @@
+package templates
+
+import (
+"github.com/F1ammetta/remon/types"
+"time"
+)
+
+templ ServicesList(services []types.Service) {
+for _, service := range services {
+@ServiceListItem(service)
+}
+}
+
+templ ServiceListItem(service types.Service) {
+<div class={ "service-item" , getStatusClass(service.ActiveState) } data-service-name={ service.Name }
+	onclick="selectService(this)" hx-get={ "/api/services/" + service.Name + "/details" }
+	hx-target="#service-details" hx-trigger="click">
+	<div class="service-item-header">
+		<h4>{ service.Name }</h4>
+		<span class={ "status-indicator" , getStatusClass(service.ActiveState) }>
+			<span class="status-dot"></span>
+		</span>
+	</div>
+	<div class="service-item-meta">
+		<span class="service-state">{ service.ActiveState }</span>
+		<span class="service-time">{ formatTimeShort(service.Since) }</span>
+	</div>
+	if service.Description != "" {
+	<div class="service-description">
+		{ truncateDescription(service.Description) }
+	</div>
+	}
+</div>
+}
+
+templ ServiceDetails(service types.Service) {
+<div class="service-details-content">
+	<div class="service-details-header">
+		<div class="service-title">
+			<h2>{ service.Name }</h2>
+			<span class={ "status-badge" , getStatusClass(service.ActiveState) }>
+				{ getStatusText(service.ActiveState) }
+			</span>
+		</div>
+		<div class="service-actions">
+			<button class="action-btn start" hx-post={ "/api/services/" + service.Name + "/start" }
+				hx-target="#service-details" disabled?={ service.ActiveState=="active" }>
+				@PlayIcon()
+				Start
+			</button>
+			<button class="action-btn stop" hx-post={ "/api/services/" + service.Name + "/stop" }
+				hx-target="#service-details" disabled?={ service.ActiveState !="active" }>
+				@StopIcon()
+				Stop
+			</button>
+			<button class="action-btn restart" hx-post={ "/api/services/" + service.Name + "/restart" }
+				hx-target="#service-details" disabled?={ service.ActiveState !="active" }>
+				@RestartIcon()
+				Restart
+			</button>
+			<button class="action-btn refresh" hx-get={ "/api/services/" + service.Name + "/status" }
+				hx-target="#service-details">
+				@RefreshIcon()
+				Refresh
+			</button>
+		</div>
+	</div>
+	<div class="service-content">
+		<div class="service-info-section">
+			<div class="info-cards">
+				<div class="info-card">
+					<h3>Status Information</h3>
+					<div class="info-row">
+						<span class="info-label">Load State:</span>
+						<span class="info-value">{ service.LoadState }</span>
+					</div>
+					<div class="info-row">
+						<span class="info-label">Active State:</span>
+						<span class="info-value">{ service.ActiveState }</span>
+					</div>
+					<div class="info-row">
+						<span class="info-label">Sub State:</span>
+						<span class="info-value">{ service.SubState }</span>
+					</div>
+					<div class="info-row">
+						<span class="info-label">Since:</span>
+						<span class="info-value">{ formatTime(service.Since) }</span>
+					</div>
+				</div>
+				if service.Description != "" {
+				<div class="info-card">
+					<h3>Description</h3>
+					<p class="service-description-full">{ service.Description }</p>
+				</div>
+				}
+			</div>
+		</div>
+		<div class="logs-section">
+			<div class="logs-header">
+				<h3>Service Logs</h3>
+				<div class="logs-controls">
+					<select id="log-lines-inline" onchange="refreshInlineLogs()">
+						<option value="50">Last 50 lines</option>
+						<option value="100" selected>Last 100 lines</option>
+						<option value="500">Last 500 lines</option>
+					</select>
+					<label class="follow-checkbox">
+						<input type="checkbox" id="follow-logs-inline"
+							onchange="toggleInlineLogsFollow()" />
+						Follow
+					</label>
+					<button class="logs-refresh-btn" onclick="refreshInlineLogs()">
+						@RefreshIcon()
+					</button>
+				</div>
+			</div>
+			<div class="logs-container-inline">
+				<pre id="logs-content-inline" class="logs-output-inline" hx-get={ "/api/services/" +
+					service.Name + "/logs?lines=100" } hx-trigger="load"></pre>
+			</div>
+		</div>
+	</div>
+</div>
+}
+
+func getStatusClass(activeState string) string {
+switch activeState {
+case "active":
+return "active"
+case "failed":
+return "failed"
+default:
+return "inactive"
+}
+}
+
+func getStatusText(activeState string) string {
+switch activeState {
+case "active":
+return "Active"
+case "failed":
+return "Failed"
+default:
+return "Inactive"
+}
+}
+
+func formatTime(t time.Time) string {
+if t.IsZero() {
+return "Never"
+}
+return t.Format("2006-01-02 15:04:05")
+}
+
+func formatTimeShort(t time.Time) string {
+if t.IsZero() {
+return "Never"
+}
+return t.Format("15:04")
+}
+
+func truncateDescription(desc string) string {
+if len(desc) > 60 {
+return desc[:57] + "..."
+}
+return desc
+}
